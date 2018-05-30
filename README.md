@@ -9,13 +9,12 @@
 ```python manage.py runserver```
 #### 3.在浏览器输入localhost:8000/即可进入网页    
 
-                  2018年5月
 ## 线上网页地址：
-  tgxbenjamin.pythonanywhere.com
+tgxbenjamin.pythonanywhere.com
 
 
 
-小组成员：        
+## 小组成员：        
 15332014田桂雄   
 15331285孙小旋   
 15331254彭一峰   
