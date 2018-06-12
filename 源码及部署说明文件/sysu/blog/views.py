@@ -1,13 +1,17 @@
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.core.paginator import Paginator
 from django.conf import settings
 from django.db.models import Count
+from django.urls import reverse
 from django.contrib.contenttypes.models import ContentType
 
-from .models import Blog, BlogType
+from .models import Blog, BlogType, BlogTypeEnum
 from read_statistics.utils import read_statistics_once_read
-
-
+from django.http import JsonResponse
+from .forms import BlogForm
+from read_statistics.models import ReadNumExpandMethod, ReadDetail
+import logging
+from enum import Enum
 def get_blog_list_common_data(request, blogs_all_list):
     paginator = Paginator(blogs_all_list, settings.EACH_PAGE_BLOGS_NUMBER)
     page_num = request.GET.get('page', 1) # 获取url的页面参数（GET请求）
@@ -72,3 +76,58 @@ def blog_detail(request, blog_pk):
     response = render(request, 'blog/blog_detail.html', context) # 响应
     response.set_cookie(read_cookie_key, 'true') # 阅读cookie标记
     return response
+
+
+def update_blog(request):
+    referer = request.META.get('HTTP_REFERER', reverse('home'))
+
+    blog_form = BlogForm(request.POST, user=request.user)
+    data = {}
+
+    # **********************Debug 信息 1
+    logger1 = logging.getLogger(__name__)
+    logger1.warning("*********************My Debug Info 1**************************")
+    logger1.warning(request.POST)
+
+    if blog_form.is_valid():
+        # 检查通过，保存数据
+        blog = Blog()
+        blog.title = blog_form.cleaned_data['title']
+        blog.author = blog_form.cleaned_data['user']
+        blog.content = blog_form.cleaned_data['content']
+
+        #枚举
+        #BlogTypeEnum()
+
+        blogtype = BlogType()
+        blogtype.type_name = blog_form.cleaned_data['blog_type']
+        #blog.blog_type.
+        #blog.blog_type= blogtype
+        #blog.blog_type.save()
+        blog.blog_type_id = BlogTypeEnum[blog_form.cleaned_data['blog_type']].value
+        blog.save()
+
+        # 返回数据
+        data['status'] = 'SUCCESS'
+        data['title'] = blog.title
+        data['author'] = blog.author.get_nickname_or_username()
+        data['created_time'] = blog.created_time.timestamp()
+        data['content'] = blog.content
+        data['blog_type'] = ContentType.objects.get_for_model(blogtype).model
+
+        # **********************Debug 信息 2
+        logger = logging.getLogger(__name__)
+        logger.warning("*********************My Debug Info 2**************************")
+        logger.warning(JsonResponse(data))
+    else:
+        data['status'] = 'ERROR'
+        data['message'] = list(blog_form.errors.as_json())[0][0]
+
+        # **********************Debug 信息 3
+        logger = logging.getLogger(__name__)
+        logger.warning("*********************My Debug Info 3**************************")
+        logger.warning(request.POST['content'])
+        logger.warning(blog_form.errors)
+
+
+    return JsonResponse(data)
